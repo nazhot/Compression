@@ -2,6 +2,6 @@
 #define HUFFMAN_H
 #include <stdlib.h>
 
-void huffman( char *stringToCompress, size_t stringLength );
+void huffman( const char *stringToCompress, const size_t stringLength );
 
 #endif
