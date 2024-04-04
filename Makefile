@@ -44,3 +44,8 @@ clean:
 	touch $(BUILD_DIR)/.gitignore
 	printf "*\n!.gitignore" >> $(BUILD_DIR)/.gitignore 
 	make
+
+.PHONY: run
+run:
+	make
+	$(BUILD_DIR)/$(TARGET_EXEC)
