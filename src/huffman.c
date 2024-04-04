@@ -7,8 +7,14 @@ struct Node {
     struct Node *left;
     struct Node *right;
     unsigned int weight;
+    char label;
 };
 
+static int orderNodesDescending( const void *node1, const void *node2 ) {
+    struct Node *n1 = ( struct Node * ) node1;
+    struct Node *n2 = ( struct Node * ) node2;
+    return n1->weight - n2->weight; 
+}
 
 void huffman( char *stringToCompress, size_t stringLength ) {
     unsigned int characterCounts[256] = {0};
@@ -31,7 +37,7 @@ void huffman( char *stringToCompress, size_t stringLength ) {
     for ( uint8_t i = 1; i != 0; ++i ) { //goes from 1 to 255
         if ( characterCounts[i] ) {
             printf( "%uc: %i\n", i, characterCounts[i] );
-            queue1[queue1Index++] = ( struct Node ) { NULL, NULL, characterCounts[i] };
+            queue1[queue1Index++] = ( struct Node ) { NULL, NULL, characterCounts[i], NULL };
         } else {
             *outputPointer++ = i;
             *outputPointer++ = ',';
@@ -41,6 +47,7 @@ void huffman( char *stringToCompress, size_t stringLength ) {
     *outputPointer = '\0';
     printf( "No counts: %s\n", output );
 
-    
+    qsort( queue1, sizeof( struct Node ), numUniqueCharacters, orderNodesDescending ); 
+
 
 }
