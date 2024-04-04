@@ -10,7 +10,7 @@ struct Node {
 };
 
 
-void huffman( char *stringToCompress, unsigned int stringLength ) {
+void huffman( char *stringToCompress, size_t stringLength ) {
     unsigned int characterCounts[256] = {0};
     unsigned int numUniqueCharacters = 0;
 
@@ -40,4 +40,7 @@ void huffman( char *stringToCompress, unsigned int stringLength ) {
     --outputPointer; 
     *outputPointer = '\0';
     printf( "No counts: %s\n", output );
+
+    
+
 }
