@@ -1,6 +1,7 @@
 #include "huffman.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 struct Node {
     struct Node *left;
@@ -21,11 +22,16 @@ void huffman( char *stringToCompress, unsigned int stringLength ) {
 
     char output[512] = {0};
     char *outputPointer = &output[0];
+    struct Node queue1[numUniqueCharacters];
+    struct Node queue2[numUniqueCharacters];
+    uint8_t queue1Index = 0; 
+    uint8_t queue2Index = 0; 
 
     printf( "Number of unique characters: %u\n", numUniqueCharacters ); 
-    for ( int i = 1; i < 256; ++i ) {
+    for ( uint16_t i = 1; i < 256; ++i ) {
         if ( characterCounts[i] ) {
-            printf( "%c: %i\n", i, characterCounts[i] );
+            printf( "%uc: %i\n", i, characterCounts[i] );
+            queue1[queue1Index++] = ( struct Node ) { NULL, NULL, characterCounts[i] };
         } else {
             *outputPointer++ = i;
             *outputPointer++ = ',';
