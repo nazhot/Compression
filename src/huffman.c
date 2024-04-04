@@ -28,7 +28,7 @@ void huffman( char *stringToCompress, unsigned int stringLength ) {
     uint8_t queue2Index = 0; 
 
     printf( "Number of unique characters: %u\n", numUniqueCharacters ); 
-    for ( uint16_t i = 1; i < 256; ++i ) {
+    for ( uint8_t i = 1; i != 0; ++i ) { //goes from 1 to 255
         if ( characterCounts[i] ) {
             printf( "%uc: %i\n", i, characterCounts[i] );
             queue1[queue1Index++] = ( struct Node ) { NULL, NULL, characterCounts[i] };
