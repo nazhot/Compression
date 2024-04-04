@@ -12,6 +12,11 @@ struct Node {
     char label;
 };
 
+struct PriorityNode {
+    struct Node *address;
+    unsigned int weight;
+};
+
 static void printNode( const struct Node *node ) {
     printf( "Node Address:     %p\n", node );
     printf( "     Label:       %c\n", node->label );
@@ -20,8 +25,25 @@ static void printNode( const struct Node *node ) {
     printf( "     Right Child: %p\n", node->right );
 }
 
-static struct Node combineAndResetNodes( struct Node *node1, struct Node *node2 ) {
-    struct Node newNode = ( struct Node ) { node1, node2, node1->weight + node2->weight, NULL };
+static void printTree( struct Node *node, char *string, unsigned int index ) {
+    if ( node->left ) {
+        string[index] = '0';
+        printTree( node->left, string, index + 1 );
+        string[index] = '\0';
+    }
+    if ( node->right ) {
+        string[index] = '1';
+        printTree( node->right, string, index + 1 );
+        string[index] = '\0';
+    }
+
+    if ( node->label ) {
+        printf( "%c: %s\n", node->label, string );
+    }
+}
+
+static struct Node combineAndResetNodes( struct PriorityNode *node1, struct PriorityNode *node2 ) {
+    struct Node newNode = ( struct Node ) { node1->address, node2->address, node1->weight + node2->weight, NULL };
     node1->weight = UINT_MAX;
     node2->weight = UINT_MAX;
     return newNode; 
@@ -30,7 +52,13 @@ static struct Node combineAndResetNodes( struct Node *node1, struct Node *node2 
 static int orderNodesDescending( const void *node1, const void *node2 ) {
     struct Node *n1 = ( struct Node * ) node1;
     struct Node *n2 = ( struct Node * ) node2;
-    return n1->weight - n2->weight; 
+    return n1->weight <  n2->weight ? -1 : 1;
+}
+
+static int orderPriorityNodesDescending( const void *node1, const void *node2 ) {
+    struct PriorityNode *n1 = ( struct PriorityNode * ) node1;
+    struct PriorityNode *n2 = ( struct PriorityNode * ) node2;
+    return n1->weight <  n2->weight ? -1 : 1;
 }
 
 void huffman( const char *stringToCompress, const size_t stringLength ) {
@@ -49,8 +77,10 @@ void huffman( const char *stringToCompress, const size_t stringLength ) {
                             //null byte will always be able to be added to end because the 
                             //final comma is replaced by it
     char *outputPointer = &output[0];
-    struct Node queue1[numUniqueCharacters];
-    struct Node queue2[numUniqueCharacters];
+    struct Node allNodes[numUniqueCharacters * 2];
+    struct PriorityNode queue1[numUniqueCharacters];
+    struct PriorityNode queue2[numUniqueCharacters];
+    uint16_t allNodesIndex = 0;
     uint8_t queue1Index = 0; 
     uint8_t queue2Index = 0; 
 
@@ -61,9 +91,10 @@ void huffman( const char *stringToCompress, const size_t stringLength ) {
     //output to print nothing
     for ( uint8_t i = 1; i != 0; ++i ) { //goes from 1 to 255
         if ( characterCounts[i] ) {
-            printf( "%uc: %i\n", i, characterCounts[i] );
-            queue1[queue1Index] = ( struct Node ) { NULL, NULL, characterCounts[i], i };
-            queue2[queue1Index++] = ( struct Node ) { NULL, NULL, UINT_MAX, 0 };
+            printf( "%c: %i\n", i, characterCounts[i] );
+            allNodes[allNodesIndex] = ( struct Node ) { NULL, NULL, characterCounts[i], i };
+            queue1[queue1Index] = ( struct PriorityNode ) { &allNodes[allNodesIndex++], characterCounts[i] };
+            queue2[queue1Index++] = ( struct PriorityNode ) { NULL, UINT_MAX };
         } else {
             *outputPointer++ = i;
             *outputPointer++ = ',';
@@ -74,7 +105,7 @@ void huffman( const char *stringToCompress, const size_t stringLength ) {
     *outputPointer = '\0';
     printf( "No counts: %s\n", output );
 
-    qsort( queue1, numUniqueCharacters, sizeof( struct Node ), orderNodesDescending ); 
+    qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderNodesDescending ); 
 
     //make the final tree
     //there will always be n - 1 steps to make it, so start by decrementing
@@ -83,8 +114,8 @@ void huffman( const char *stringToCompress, const size_t stringLength ) {
         bool queue1LT = queue1[0].weight < queue2[0].weight; 
         bool queue2LT;
         //queue2Index -= queue1LT == false; //decrement the index if queue2 element is taken
-        struct Node *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
-        struct Node *p_node2;
+        struct PriorityNode *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
+        struct PriorityNode *p_node2;
         if ( queue1LT ) {
             queue2LT = queue2[0].weight < queue1[1].weight; 
             p_node2 = queue2LT ? &queue2[0] : &queue1[1];
@@ -95,10 +126,13 @@ void huffman( const char *stringToCompress, const size_t stringLength ) {
             //queue2Index -= queue2LT;
         }
         //need to move all of the elements forward
-        queue2[queue2Index++] = combineAndResetNodes( p_node1, p_node2 );
+        allNodes[allNodesIndex] = combineAndResetNodes( p_node1, p_node2 );
+        queue2[queue2Index++] = ( struct PriorityNode ) { &allNodes[allNodesIndex], allNodes[allNodesIndex].weight };
+        ++allNodesIndex;
 
-        qsort( queue1, numUniqueCharacters, sizeof( struct Node ), orderNodesDescending );
-        qsort( queue2, numUniqueCharacters, sizeof( struct Node ), orderNodesDescending );
+        qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesDescending );
+        qsort( queue2, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesDescending );
     }
-    printNode( &queue2[0] );
+    char *temp = malloc( sizeof( char ) * 256 );
+    printTree( &allNodes[allNodesIndex - 1], temp, 0 );
 }
