@@ -176,7 +176,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
         struct EncoderEntry entry = encoderTable[character];
         //printf( "%c: %u (%u)\n", character, entry.key, entry.keyLength );
         for ( int j = 0; j < entry.keyLength; ++j ) {
-            if ( bitOffset + j > 7 ) { //end of buffer
+            if ( bitOffset > 7 ) { //end of buffer
                 outputText[outputTextIndex++] = currentByte;
                 currentByte = '\0';
                 bitOffset = 0;
