@@ -17,6 +17,11 @@ struct PriorityNode {
     unsigned int weight;
 };
 
+struct EncoderEntry {
+    uint64_t key;
+    uint8_t keyLength;
+};
+
 static void printNode( const struct Node *node ) {
     printf( "Node Address:     %p\n", node );
     printf( "     Label:       %c\n", node->label );
@@ -40,6 +45,18 @@ static void printTree( struct Node *node, char *string, unsigned int index ) {
     if ( node->label ) {
         printf( "%c: %s\n", node->label, string );
     }
+}
+
+static void setupEncoderTable( struct Node *node, struct EncoderEntry *table, uint64_t binary, unsigned int index ) {
+    if ( !node ) return;
+    
+    if ( node->label ) {
+        table[node->label] = ( struct EncoderEntry ) { binary, index };
+        return;
+    }
+
+    setupEncoderTable( node->left, table, binary, index + 1 );
+    setupEncoderTable( node->right, table, binary | ( 1 << index ), index + 1 );
 }
 
 static struct Node combineAndResetNodes( struct PriorityNode *node1, struct PriorityNode *node2 ) {
@@ -146,6 +163,8 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
 
     char *temp = malloc( sizeof( char ) * 256 );
     printTree( &allNodes[allNodesIndex - 1], temp, 0 );
+    struct EncoderEntry encoderTable[256] = {0};
+    setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0 );
 }
 
 
