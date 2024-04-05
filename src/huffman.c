@@ -52,13 +52,13 @@ static struct Node combineAndResetNodes( struct PriorityNode *node1, struct Prio
 static int orderNodesDescending( const void *node1, const void *node2 ) {
     struct Node *n1 = ( struct Node * ) node1;
     struct Node *n2 = ( struct Node * ) node2;
-    return n1->weight <  n2->weight ? -1 : 1;
+    return n1->weight <=  n2->weight ? -1 : 1;
 }
 
 static int orderPriorityNodesDescending( const void *node1, const void *node2 ) {
     struct PriorityNode *n1 = ( struct PriorityNode * ) node1;
     struct PriorityNode *n2 = ( struct PriorityNode * ) node2;
-    return n1->weight <  n2->weight ? -1 : 1;
+    return n1->weight <=  n2->weight ? -1 : 1;
 }
 
 void huffman( const char *stringToCompress, const size_t stringLength ) {
@@ -105,12 +105,13 @@ void huffman( const char *stringToCompress, const size_t stringLength ) {
     *outputPointer = '\0';
     printf( "No counts: %s\n", output );
 
-    qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderNodesDescending ); 
+    qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesDescending ); 
 
     //make the final tree
     //there will always be n - 1 steps to make it, so start by decrementing
     //the value
-    while ( --numUniqueCharacters ) {
+    uint8_t numStepsNeeded = numUniqueCharacters - 1;
+    while ( numStepsNeeded-- ) {
         bool queue1LT = queue1[0].weight < queue2[0].weight; 
         bool queue2LT;
         //queue2Index -= queue1LT == false; //decrement the index if queue2 element is taken
