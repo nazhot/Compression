@@ -174,6 +174,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     for ( int i = 0; i < stringLength; ++i ) {
         char character = stringToCompress[i];
         struct EncoderEntry entry = encoderTable[character];
+        //printf( "%c: %u (%u)\n", character, entry.key, entry.keyLength );
         for ( int j = 0; j < entry.keyLength; ++j ) {
             if ( bitOffset + j > 7 ) { //end of buffer
                 outputText[outputTextIndex++] = currentByte;
@@ -188,6 +189,24 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     FILE *outputFile = fopen( "output", "wb" );
     fwrite( outputText, 1, outputTextIndex, outputFile );
     fclose( outputFile );
+
+    FILE *inputFile = fopen( "output", "rb" );
+    char encodedBinary = '\0';
+    struct Node *currentNode = &allNodes[allNodesIndex - 1];
+    while ( fread( &encodedBinary, 1, 1, inputFile ) ) {
+        for ( int i = 0; i < 8; ++i ) {
+            if ( currentNode->label ) {
+                printf( "%c", currentNode->label );
+                currentNode = &allNodes[allNodesIndex - 1];
+            }
+            if ( encodedBinary >> i & 1 ) {
+                currentNode = currentNode->right;
+            } else {
+                currentNode = currentNode->left;
+            }
+        }
+    }
+    printf( "\n" );
 }
 
 
