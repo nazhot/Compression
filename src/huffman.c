@@ -165,6 +165,29 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     printTree( &allNodes[allNodesIndex - 1], temp, 0 );
     struct EncoderEntry encoderTable[256] = {0};
     setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0 );
+
+    char outputText[stringLength];
+    unsigned int outputTextIndex = 0;
+    uint8_t bitOffset = 0;
+    char currentByte = '\0';
+
+    for ( int i = 0; i < stringLength; ++i ) {
+        char character = stringToCompress[i];
+        struct EncoderEntry entry = encoderTable[character];
+        for ( int j = 0; j < entry.keyLength; ++j ) {
+            if ( bitOffset + j > 7 ) { //end of buffer
+                outputText[outputTextIndex++] = currentByte;
+                currentByte = '\0';
+                bitOffset = 0;
+            }
+            currentByte |= ( ( entry.key >> j ) & 1 ) << bitOffset; //key bit shifted j times to the right (0 or 1), and shift that to the left bitOffset times
+            bitOffset++;
+        }
+    }
+    outputText[outputTextIndex++] = currentByte;
+    FILE *outputFile = fopen( "output", "wb" );
+    fwrite( outputText, 1, outputTextIndex, outputFile );
+    fclose( outputFile );
 }
 
 
