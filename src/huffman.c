@@ -118,7 +118,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     //make the final tree
     uint8_t numStepsNeeded = numUniqueCharacters - 1;
     while ( numStepsNeeded-- ) {
-        bool queue1LT = queue1[0].weight < queue2[0].weight; 
+        const bool queue1LT = queue1[0].weight < queue2[0].weight; 
         bool queue2LT;
         queue2Index -= queue1LT == false; //decrement the index if queue2 element is taken
         struct PriorityNode *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
@@ -126,18 +126,20 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
         if ( queue1LT ) {
             queue2LT = queue2[0].weight < queue1[1].weight; 
             p_node2 = queue2LT ? &queue2[0] : &queue1[1];
-            queue2Index -= queue2LT; 
         } else {
             queue2LT = queue2[1].weight < queue1[0].weight;
             p_node2 = queue2LT ?  &queue2[1] : &queue1[0];
-            queue2Index -= queue2LT;
         }
-        unsigned int numTakenFromQueue1 = queue1LT + ( queue2LT == false );
-        unsigned int numTakenFromQueue2 = 2 - numTakenFromQueue1;
-        //need to move all of the elements forward
+        queue2Index -= queue2LT; 
+        const unsigned int numTakenFromQueue1 = queue1LT + ( queue2LT == false ); //how many elements from q1 were taken
+        const unsigned int numTakenFromQueue2 = 2 - numTakenFromQueue1; //how many elements from q2 were taken
+
+        //create the new tree with the two lowest elements as its children
         allNodes[allNodesIndex] = combineAndResetNodes( p_node1, p_node2 );
+        //shift both queues down by how many elements were taken from each
         shiftPriorityNodeArrayDown( queue1, numUniqueCharacters, numTakenFromQueue1 );
         shiftPriorityNodeArrayDown( queue2, numUniqueCharacters, numTakenFromQueue2 );
+        //after shifting q2, place the new element at the end of the queue
         queue2[queue2Index++] = ( struct PriorityNode ) { &allNodes[allNodesIndex], allNodes[allNodesIndex].weight };
         ++allNodesIndex;
     }
