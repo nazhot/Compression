@@ -49,19 +49,27 @@ static struct Node combineAndResetNodes( struct PriorityNode *node1, struct Prio
     return newNode; 
 }
 
-static int orderNodesDescending( const void *node1, const void *node2 ) {
-    struct Node *n1 = ( struct Node * ) node1;
-    struct Node *n2 = ( struct Node * ) node2;
-    return n1->weight <=  n2->weight ? -1 : 1;
-}
-
 static int orderPriorityNodesDescending( const void *node1, const void *node2 ) {
     struct PriorityNode *n1 = ( struct PriorityNode * ) node1;
     struct PriorityNode *n2 = ( struct PriorityNode * ) node2;
     return n1->weight <=  n2->weight ? -1 : 1;
 }
 
-void huffman( const char *stringToCompress, const size_t stringLength ) {
+static void shiftPriorityNodeArrayDown( struct PriorityNode * const array, const unsigned int arrayLength, const unsigned int numShiftDown ) {
+    if ( arrayLength <= numShiftDown ) return;
+
+    if ( numShiftDown == 2 ) array[1] = ( struct PriorityNode ) { NULL, UINT_MAX }; //deals with a situation where if it's a length of 3, and a shiftdown of 2, array[1] wouldn't be touched and would mess up future calcs
+    unsigned int index = numShiftDown;
+    while ( arrayLength - index ) {
+        array[index - numShiftDown] = array[index]; 
+        ++index;
+    }
+    for ( unsigned int i = 0; i < numShiftDown; i++ ) {
+        array[arrayLength - 1 - i] = ( struct PriorityNode ) { NULL, UINT_MAX };
+    }
+}
+
+void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     unsigned int characterCounts[256] = {0};
     unsigned int numUniqueCharacters = 0;
 
@@ -108,32 +116,37 @@ void huffman( const char *stringToCompress, const size_t stringLength ) {
     qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesDescending ); 
 
     //make the final tree
-    //there will always be n - 1 steps to make it, so start by decrementing
-    //the value
     uint8_t numStepsNeeded = numUniqueCharacters - 1;
     while ( numStepsNeeded-- ) {
         bool queue1LT = queue1[0].weight < queue2[0].weight; 
         bool queue2LT;
-        //queue2Index -= queue1LT == false; //decrement the index if queue2 element is taken
+        queue2Index -= queue1LT == false; //decrement the index if queue2 element is taken
         struct PriorityNode *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
         struct PriorityNode *p_node2;
         if ( queue1LT ) {
             queue2LT = queue2[0].weight < queue1[1].weight; 
             p_node2 = queue2LT ? &queue2[0] : &queue1[1];
-            //queue2Index -= queue2LT; 
+            queue2Index -= queue2LT; 
         } else {
             queue2LT = queue2[1].weight < queue1[0].weight;
             p_node2 = queue2LT ?  &queue2[1] : &queue1[0];
-            //queue2Index -= queue2LT;
+            queue2Index -= queue2LT;
         }
+        unsigned int numTakenFromQueue1 = queue1LT + ( queue2LT == false );
+        unsigned int numTakenFromQueue2 = 2 - numTakenFromQueue1;
         //need to move all of the elements forward
         allNodes[allNodesIndex] = combineAndResetNodes( p_node1, p_node2 );
+        shiftPriorityNodeArrayDown( queue1, numUniqueCharacters, numTakenFromQueue1 );
+        shiftPriorityNodeArrayDown( queue2, numUniqueCharacters, numTakenFromQueue2 );
         queue2[queue2Index++] = ( struct PriorityNode ) { &allNodes[allNodesIndex], allNodes[allNodesIndex].weight };
         ++allNodesIndex;
-
-        qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesDescending );
-        qsort( queue2, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesDescending );
     }
+
     char *temp = malloc( sizeof( char ) * 256 );
     printTree( &allNodes[allNodesIndex - 1], temp, 0 );
+}
+
+
+void huffman_decode( const char *stringToDecompress ) {
+
 }

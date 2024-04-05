@@ -4,6 +4,6 @@
 
 int main( int argc, char *argv[] ) {
     printf( "Working\n" );
-    huffman( "Tester", 6 );
+    huffman_encode( "Tester", 6 );
     return 0;
 }
