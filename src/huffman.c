@@ -48,17 +48,19 @@ static void printTree( struct Node *node, char *string, unsigned int index ) {
     }
 }
 
-static void setupEncoderTable( struct Node *node, struct EncoderEntry *table, uint64_t binary, unsigned int index ) {
+static void setupEncoderTable( struct Node *node, struct EncoderEntry *table, uint64_t binary, unsigned int index, uint8_t *encoderTableIndex ) {
     if ( !node ) return;
     
     if ( node->label ) {
-        table[node->label].key = binary;
-        table[node->label].keyLength = index;
+        table[*encoderTableIndex].character = node->label;
+        table[*encoderTableIndex].key = binary;
+        table[*encoderTableIndex].keyLength = index;
+        *encoderTableIndex = *encoderTableIndex + 1;
         return;
     }
 
-    setupEncoderTable( node->left, table, binary, index + 1 );
-    setupEncoderTable( node->right, table, binary | ( 1 << index ), index + 1 );
+    setupEncoderTable( node->left, table, binary, index + 1, encoderTableIndex );
+    setupEncoderTable( node->right, table, binary | ( 1 << index ), index + 1, encoderTableIndex );
 }
 
 static struct Node combineAndResetNodes( struct PriorityNode *node1, struct PriorityNode *node2 ) {
@@ -169,16 +171,18 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     char *temp = malloc( sizeof( char ) * 256 );
     printTree( &allNodes[allNodesIndex - 1], temp, 0 );
     free( temp );
-    struct EncoderEntry encoderTable[256];
-    for ( int i = 0; i < 256; ++i ) {
+    struct EncoderEntry encoderTable[numUniqueCharacters];
+    for ( int i = 0; i < numUniqueCharacters; ++i ) {
         encoderTable[i] = ( struct EncoderEntry ) { 
                                                     .character = i,
                                                     .key = 0,
                                                     .keyLength = 255
                                                   };
     }
-    setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0 );
-    qsort( encoderTable, 256, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByKeyLength );
+    uint8_t encoderTableIndex = 0;
+    setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0, &encoderTableIndex );
+    qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByCharacter );
+    qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByKeyLength );
 
 /*
     char outputText[stringLength];
