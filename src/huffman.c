@@ -172,6 +172,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     printTree( &allNodes[allNodesIndex - 1], temp, 0 );
     free( temp );
     struct EncoderEntry encoderTable[numUniqueCharacters];
+    uint8_t encoderTransform[256] = {0};
     for ( int i = 0; i < numUniqueCharacters; ++i ) {
         encoderTable[i] = ( struct EncoderEntry ) { 
                                                     .character = i,
@@ -183,8 +184,28 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0, &encoderTableIndex );
     qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByCharacter );
     qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByKeyLength );
+    for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
+        encoderTransform[encoderTable[i].character] = i;
+    }
 
-/*
+    for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
+        if ( i == 0 ) {
+            encoderTable[0].key = 0; //will expand out to all zeroes, keyLength tells the encoder how many 0 bits to input to file
+            continue;
+        }
+        unsigned int newKey = encoderTable[i - 1].key + 1;
+        unsigned int length = 0;
+        for ( unsigned int j = 0; j < sizeof( unsigned int ) * 8; ++j ) {
+            if ( newKey >> j & 1 ) {
+                length = j + 1;
+            }
+        }
+        while ( length++ < encoderTable[i].keyLength ) {
+            newKey = newKey << 1;
+        }
+        encoderTable[i].key = newKey;
+    }
+
     char outputText[stringLength];
     unsigned int outputTextIndex = 0;
     uint8_t bitOffset = 0;
@@ -192,7 +213,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
 
     for ( int i = 0; i < stringLength; ++i ) {
         char character = stringToCompress[i];
-        struct EncoderEntry entry = encoderTable[character];
+        struct EncoderEntry entry = encoderTable[encoderTransform[character]];
         //printf( "%c: %u (%u)\n", character, entry.key, entry.keyLength );
         for ( int j = 0; j < entry.keyLength; ++j ) {
             if ( bitOffset > 7 ) { //end of buffer
@@ -208,6 +229,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     FILE *outputFile = fopen( "output", "wb" );
     fwrite( outputText, 1, outputTextIndex, outputFile );
     fclose( outputFile );
+/*
 
     FILE *inputFile = fopen( "output", "rb" );
     char encodedBinary = '\0';
