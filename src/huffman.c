@@ -18,6 +18,7 @@ struct PriorityNode {
 };
 
 struct EncoderEntry {
+    char character;
     uint64_t key;
     uint8_t keyLength;
 };
@@ -51,7 +52,8 @@ static void setupEncoderTable( struct Node *node, struct EncoderEntry *table, ui
     if ( !node ) return;
     
     if ( node->label ) {
-        table[node->label] = ( struct EncoderEntry ) { binary, index };
+        table[node->label].key = binary;
+        table[node->label].keyLength = index;
         return;
     }
 
@@ -66,9 +68,9 @@ static struct Node combineAndResetNodes( struct PriorityNode *node1, struct Prio
     return newNode; 
 }
 
-static int orderPriorityNodesDescending( const void *node1, const void *node2 ) {
-    struct PriorityNode *n1 = ( struct PriorityNode * ) node1;
-    struct PriorityNode *n2 = ( struct PriorityNode * ) node2;
+static int orderPriorityNodesAscending( const void *node1, const void *node2 ) {
+    const struct PriorityNode *n1 = ( struct PriorityNode * ) node1;
+    const struct PriorityNode *n2 = ( struct PriorityNode * ) node2;
     return n1->weight <=  n2->weight ? -1 : 1;
 }
 
@@ -84,6 +86,21 @@ static void shiftPriorityNodeArrayDown( struct PriorityNode * const array, const
     for ( unsigned int i = 0; i < numShiftDown; i++ ) {
         array[arrayLength - 1 - i] = ( struct PriorityNode ) { NULL, UINT_MAX };
     }
+}
+
+static int orderEncoderEntryAscendingByCharacter( const void *entry1, const void *entry2 ) {
+    const struct EncoderEntry *e1 = ( struct EncoderEntry * ) entry1;
+    const struct EncoderEntry *e2 = ( struct EncoderEntry * ) entry2;
+    return e1->character < e2->character ? -1 : 1;
+}
+static int orderEncoderEntryAscendingByKeyLength( const void *entry1, const void *entry2 ) {
+    const struct EncoderEntry *e1 = ( struct EncoderEntry * ) entry1;
+    const struct EncoderEntry *e2 = ( struct EncoderEntry * ) entry2;
+    return e1->keyLength <= e2->keyLength ? -1 : 1;
+}
+
+static void updateTableToCanonical( struct EncoderEntry *table ) {
+
 }
 
 void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
@@ -119,7 +136,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
         queue2[queue1Index++] = ( struct PriorityNode ) { NULL, UINT_MAX };
     }
 
-    qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesDescending ); 
+    qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesAscending ); 
 
     //make the final tree
     uint8_t numStepsNeeded = numUniqueCharacters - 1;
@@ -152,9 +169,18 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     char *temp = malloc( sizeof( char ) * 256 );
     printTree( &allNodes[allNodesIndex - 1], temp, 0 );
     free( temp );
-    struct EncoderEntry encoderTable[256] = {0};
+    struct EncoderEntry encoderTable[256];
+    for ( int i = 0; i < 256; ++i ) {
+        encoderTable[i] = ( struct EncoderEntry ) { 
+                                                    .character = i,
+                                                    .key = 0,
+                                                    .keyLength = 255
+                                                  };
+    }
     setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0 );
+    qsort( encoderTable, 256, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByKeyLength );
 
+/*
     char outputText[stringLength];
     unsigned int outputTextIndex = 0;
     uint8_t bitOffset = 0;
@@ -196,8 +222,8 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
         }
     }
     printf( "\n" );
+*/
 }
-
 
 void huffman_decode( const char *stringToDecompress ) {
 
