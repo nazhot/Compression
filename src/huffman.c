@@ -98,11 +98,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
 
     if ( !numUniqueCharacters ) return;
 
-    char output[512] = {0}; //double the range of byte to account for commas
-                            //null byte will always be able to be added to end because the 
-                            //final comma is replaced by it
-    char *outputPointer = &output[0];
-    struct Node allNodes[numUniqueCharacters * 2];
+    struct Node allNodes[numUniqueCharacters * 2 - 1];
     struct PriorityNode queue1[numUniqueCharacters];
     struct PriorityNode queue2[numUniqueCharacters];
     uint16_t allNodesIndex = 0;
@@ -115,20 +111,13 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     //for now, I am just testing with strings, so am avoiding 0 because it causes
     //output to print nothing
     for ( uint8_t i = 1; i != 0; ++i ) { //goes from 1 to 255
-        if ( characterCounts[i] ) {
-            printf( "%c: %i\n", i, characterCounts[i] );
-            allNodes[allNodesIndex] = ( struct Node ) { NULL, NULL, characterCounts[i], i };
-            queue1[queue1Index] = ( struct PriorityNode ) { &allNodes[allNodesIndex++], characterCounts[i] };
-            queue2[queue1Index++] = ( struct PriorityNode ) { NULL, UINT_MAX };
-        } else {
-            *outputPointer++ = i;
-            *outputPointer++ = ',';
-        }
+        if ( !characterCounts[i] ) continue;
+
+        printf( "%c: %i\n", i, characterCounts[i] );
+        allNodes[allNodesIndex] = ( struct Node ) { NULL, NULL, characterCounts[i], i };
+        queue1[queue1Index] = ( struct PriorityNode ) { &allNodes[allNodesIndex++], characterCounts[i] };
+        queue2[queue1Index++] = ( struct PriorityNode ) { NULL, UINT_MAX };
     }
-    //remove final comma, replace with null byte
-    --outputPointer; 
-    *outputPointer = '\0';
-    printf( "No counts: %s\n", output );
 
     qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesDescending ); 
 
@@ -137,7 +126,6 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     while ( numStepsNeeded-- ) {
         const bool queue1LT = queue1[0].weight < queue2[0].weight; 
         bool queue2LT;
-        queue2Index -= queue1LT == false; //decrement the index if queue2 element is taken
         struct PriorityNode *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
         struct PriorityNode *p_node2;
         if ( queue1LT ) {
@@ -147,7 +135,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
             queue2LT = queue2[1].weight < queue1[0].weight;
             p_node2 = queue2LT ?  &queue2[1] : &queue1[0];
         }
-        queue2Index -= queue2LT; 
+        queue2Index -= ( queue1LT == false ) + ( queue2LT );
         const unsigned int numTakenFromQueue1 = queue1LT + ( queue2LT == false ); //how many elements from q1 were taken
         const unsigned int numTakenFromQueue2 = 2 - numTakenFromQueue1; //how many elements from q2 were taken
 
@@ -163,6 +151,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
 
     char *temp = malloc( sizeof( char ) * 256 );
     printTree( &allNodes[allNodesIndex - 1], temp, 0 );
+    free( temp );
     struct EncoderEntry encoderTable[256] = {0};
     setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0 );
 
