@@ -173,6 +173,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     free( temp );
     struct EncoderEntry encoderTable[numUniqueCharacters];
     uint8_t encoderTransform[256] = {0};
+    uint8_t numKeyLength[256] = {0}; //track how many of each key length there are for encoding the tree
     for ( int i = 0; i < numUniqueCharacters; ++i ) {
         encoderTable[i] = ( struct EncoderEntry ) { 
                                                     .character = i,
@@ -184,8 +185,10 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0, &encoderTableIndex );
     qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByCharacter );
     qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByKeyLength );
+
     for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
         encoderTransform[encoderTable[i].character] = i;
+        numKeyLength[encoderTable[i].keyLength]++;
     }
 
     for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
@@ -227,6 +230,16 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     }
     outputText[outputTextIndex++] = currentByte;
     FILE *outputFile = fopen( "output", "wb" );
+
+    uint8_t maxKeyLength = encoderTable[numUniqueCharacters - 1].keyLength;
+    fwrite( &maxKeyLength, 1, 1, outputFile );
+    for ( unsigned int i = 1; i < maxKeyLength; ++i ) {
+        fwrite( &numKeyLength[i], 1, 1, outputFile ); //later update to only write the bits that are needed (1 for key length 1, 2 for 2, etc)
+    }
+    for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
+        fwrite( &encoderTable[i].character, 1, 1, outputFile );
+    }
+
     fwrite( outputText, 1, outputTextIndex, outputFile );
     fclose( outputFile );
 /*
