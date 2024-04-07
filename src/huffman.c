@@ -233,7 +233,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
 
     uint8_t maxKeyLength = encoderTable[numUniqueCharacters - 1].keyLength;
     fwrite( &maxKeyLength, 1, 1, outputFile );
-    for ( unsigned int i = 1; i < maxKeyLength; ++i ) {
+    for ( unsigned int i = 1; i < maxKeyLength + 1; ++i ) {
         fwrite( &numKeyLength[i], 1, 1, outputFile ); //later update to only write the bits that are needed (1 for key length 1, 2 for 2, etc)
     }
     for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
@@ -264,6 +264,15 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
 */
 }
 
-void huffman_decode( const char *stringToDecompress ) {
-
+void huffman_decode( FILE *inputFile ) {
+    if ( !inputFile ) return;
+    
+    uint8_t maxKeyLength;
+    fread( &maxKeyLength, 1, 1, inputFile );
+    printf( "Max key length: %u\n", maxKeyLength );
+    uint8_t numKeyLengths[maxKeyLength]; //index 0 is length 1
+    for ( unsigned int i = 0; i < maxKeyLength; ++i ) {
+        fread( &numKeyLengths[i], 1, 1, inputFile );
+        printf( "Keys @ length %u: %u\n", i + 1, numKeyLengths[i] );
+    }
 }
