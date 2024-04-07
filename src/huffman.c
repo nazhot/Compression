@@ -271,8 +271,38 @@ void huffman_decode( FILE *inputFile ) {
     fread( &maxKeyLength, 1, 1, inputFile );
     printf( "Max key length: %u\n", maxKeyLength );
     uint8_t numKeyLengths[maxKeyLength]; //index 0 is length 1
+    uint8_t numUniqueCharacters = 0;
     for ( unsigned int i = 0; i < maxKeyLength; ++i ) {
         fread( &numKeyLengths[i], 1, 1, inputFile );
+        numUniqueCharacters += numKeyLengths[i];
         printf( "Keys @ length %u: %u\n", i + 1, numKeyLengths[i] );
+    }
+    printf( "Num unique characters: %u\n", numUniqueCharacters );
+    struct EncoderEntry encoderTable[numUniqueCharacters];
+    uint8_t currentKeyLength = 1;
+    while ( !numKeyLengths[currentKeyLength - 1] ) currentKeyLength++;
+    uint8_t runningTotal = numKeyLengths[currentKeyLength - 1];
+    for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
+        fread( &encoderTable[i].character, 1, 1, inputFile );
+        while ( i >= runningTotal ) {
+            runningTotal += numKeyLengths[++currentKeyLength - 1];
+        }
+        encoderTable[i].keyLength = currentKeyLength;
+        if ( i == 0 ) {
+            encoderTable[0].key = 0;
+            continue;
+        }
+
+        unsigned int newKey = encoderTable[i - 1].key + 1;
+        unsigned int length = 0;
+        for ( unsigned int j = 0; j < sizeof( unsigned int ) * 8; ++j ) {
+            if ( newKey >> j & 1 ) {
+                length = j + 1;
+            }
+        }
+        while ( length++ < encoderTable[i].keyLength ) {
+            newKey = newKey << 1;
+        }
+        encoderTable[i].key = newKey;
     }
 }
