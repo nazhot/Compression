@@ -305,4 +305,21 @@ void huffman_decode( FILE *inputFile ) {
         }
         encoderTable[i].key = newKey;
     }
+
+    struct Node allNodes[numUniqueCharacters * 2 - 1];
+    unsigned int allNodesIndex = 0;
+
+    for ( unsigned int i = 0; i < numUniqueCharacters * 2 - 1; ++i ) {
+        allNodes[i] = ( struct Node ) { NULL, NULL, 0, NULL };
+    }
+    
+    //setup tree
+    for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
+        struct Node *currentNodeAddress = &allNodes[0];
+        for ( unsigned int j = 0; j < encoderTable[i].keyLength; ++ j ) {
+            bool nextIsRight = encoderTable[i].key >> j & 1;
+            struct Node *nextNodeAddress = nextIsRight ? currentNodeAddress->right :
+                                           currentNodeAddress->left;
+        }
+    }
 }
