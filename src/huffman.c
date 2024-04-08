@@ -112,14 +112,18 @@ static void updateTableToCanonical( struct EncoderEntry *table ) {
 
 }
 
-void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
+void huffman_encode( const char *inputFileName, const char *outputFileName ) {
+    FILE *inputFile = fopen( inputFileName, "r" );
+    if ( !inputFile ) return;
+
     unsigned int characterCounts[256] = {0};
     unsigned int numUniqueCharacters = 0;
+    char currentCharacter = '\0';
+    unsigned int inputFileLength = 0;
 
-    for ( size_t i = 0; i < stringLength; ++i ) {
-        //increment characterCounts while also checking if that was the first
-        //time that character was found
-        numUniqueCharacters += ++characterCounts[stringToCompress[i]] == 1;
+    while ( fread( &currentCharacter, 1, 1, inputFile ) ) {
+        numUniqueCharacters += ++characterCounts[currentCharacter] == 1;
+        inputFileLength++;
     }
 
     if ( !numUniqueCharacters ) return;
@@ -210,14 +214,17 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
         printf( "\n" );
     }
 
-    char outputText[stringLength];
+    char outputText[inputFileLength];
     unsigned int outputTextIndex = 0;
     uint8_t bitOffset = 0;
     char currentByte = '\0';
+    if ( fseek( inputFile, 0, SEEK_SET ) ) { //reset file to beginning
+        fprintf( stderr, "Could not reset file to beginning!" );
+        return;
+    }
 
-    for ( int i = 0; i < stringLength; ++i ) {
-        char character = stringToCompress[i];
-        struct EncoderEntry entry = encoderTable[encoderTransform[character]];
+    while ( fread( &currentCharacter, 1, 1, inputFile ) ) {
+        struct EncoderEntry entry = encoderTable[encoderTransform[currentCharacter]];
         //printf( "%c: %u (%u)\n", character, entry.key, entry.keyLength );
         for ( int j = 0; j < entry.keyLength; ++j ) {
             if ( bitOffset > 7 ) { //end of buffer
@@ -230,7 +237,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
         }
     }
     outputText[outputTextIndex++] = currentByte;
-    FILE *outputFile = fopen( "output", "wb" );
+    FILE *outputFile = fopen( outputFileName, "wb" );
 
     uint8_t maxKeyLength = encoderTable[numUniqueCharacters - 1].keyLength;
     fwrite( &maxKeyLength, 1, 1, outputFile );
@@ -245,7 +252,8 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
     fclose( outputFile );
 }
 
-void huffman_decode( FILE *inputFile ) {
+void huffman_decode( const char *inputFileName ) {
+    FILE *inputFile = fopen( inputFileName, "r" );
     if ( !inputFile ) return;
     
     uint8_t maxKeyLength;

@@ -4,10 +4,9 @@
 #include "huffman.h"
 
 int main( int argc, char *argv[] ) {
-    printf( "Working\n" );
-    char *string = "This is a bit of a longer string just to test how it handles something like this\n";
-    huffman_encode( string, strlen( string ) );
-    FILE *inputFile = fopen( "output", "r" );
-    huffman_decode( inputFile );
+    char *outputFileName = "huffman_output";
+    char *inputFileName = "huffman_input";
+    huffman_encode( inputFileName, outputFileName );
+    huffman_decode( outputFileName );
     return 0;
 }

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void huffman_encode( const char *stringToCompress, const size_t stringLength );
-void huffman_decode( FILE *inputFile );
+void huffman_encode( const char *inputFileName, const char *outputFileName );
+void huffman_decode( const char *inputFileName );
 
 #endif
