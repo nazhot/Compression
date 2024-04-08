@@ -225,7 +225,7 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
                 currentByte = '\0';
                 bitOffset = 0;
             }
-            currentByte |= ( ( entry.key >> j ) & 1 ) << bitOffset; //key bit shifted j times to the right (0 or 1), and shift that to the left bitOffset times
+            currentByte |= ( ( entry.key >> ( entry.keyLength - j - 1 ) ) & 1 ) << bitOffset; //key bit shifted j times to the right (0 or 1), and shift that to the left bitOffset times
             bitOffset++;
         }
     }
@@ -243,26 +243,6 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
 
     fwrite( outputText, 1, outputTextIndex, outputFile );
     fclose( outputFile );
-/*
-
-    FILE *inputFile = fopen( "output", "rb" );
-    char encodedBinary = '\0';
-    struct Node *currentNode = &allNodes[allNodesIndex - 1];
-    while ( fread( &encodedBinary, 1, 1, inputFile ) ) {
-        for ( int i = 0; i < 8; ++i ) {
-            if ( currentNode->label ) {
-                printf( "%c", currentNode->label );
-                currentNode = &allNodes[allNodesIndex - 1];
-            }
-            if ( encodedBinary >> i & 1 ) {
-                currentNode = currentNode->right;
-            } else {
-                currentNode = currentNode->left;
-            }
-        }
-    }
-    printf( "\n" );
-*/
 }
 
 void huffman_decode( FILE *inputFile ) {
@@ -315,7 +295,7 @@ void huffman_decode( FILE *inputFile ) {
     for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
         struct Node *currentNodeAddress = &allNodes[0];
         for ( unsigned int j = 0; j < encoderTable[i].keyLength; ++j ) {
-            bool nextIsRight = encoderTable[i].key >> j & 1;
+            bool nextIsRight = encoderTable[i].key >> ( encoderTable[i].keyLength - j - 1 ) & 1;
             struct Node *nextNodeAddress = nextIsRight ? currentNodeAddress->right :
                                            currentNodeAddress->left;
             if ( !nextNodeAddress ) {
@@ -331,5 +311,22 @@ void huffman_decode( FILE *inputFile ) {
             currentNodeAddress = nextNodeAddress;
         }
         currentNodeAddress->label = encoderTable[i].character;
+    }
+
+    char currentByte; 
+    struct Node *currentNode = &allNodes[0];
+    while ( fread( &currentByte, 1, 1, inputFile ) ) {
+       for ( unsigned int i = 0; i < 8; ++i ) {
+            if ( !currentNode ) {
+                break;
+            }
+            if ( currentNode->label ) {
+                printf( "%c", currentNode->label );
+                currentNode = &allNodes[0];
+            }
+
+            bool moveRight = currentByte >> i & 1;
+            currentNode = moveRight ? currentNode->right : currentNode->left;
+        }
     }
 }
