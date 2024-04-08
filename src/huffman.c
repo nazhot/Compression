@@ -284,10 +284,10 @@ void huffman_decode( FILE *inputFile ) {
         printf( "\n" );
     }
 
-    struct Node allNodes[numUniqueCharacters * 3];
+    struct Node allNodes[numUniqueCharacters * 2 - 1];
     unsigned int allNodesIndex = 1;
 
-    for ( unsigned int i = 0; i < numUniqueCharacters * 3; ++i ) {
+    for ( unsigned int i = 0; i < numUniqueCharacters * 2 - 1; ++i ) {
         allNodes[i] = ( struct Node ) { NULL, NULL, 0, '\0' };
     }
     
