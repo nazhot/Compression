@@ -48,6 +48,13 @@ static void printTree( struct Node *node, char *string, unsigned int index ) {
     }
 }
 
+static void printBinary( unsigned int binary, unsigned int length ) {
+    for ( unsigned int i = 0; i < length; ++i ) {
+       printf( "%c", binary >> ( length - 1 - i ) & 1 ? '1' : '0' );
+    }
+    printf( " (%u)", binary );
+}
+
 static void setupEncoderTable( struct Node *node, struct EncoderEntry *table, uint64_t binary, unsigned int index, uint8_t *encoderTableIndex ) {
     if ( !node ) return;
     
@@ -191,22 +198,16 @@ void huffman_encode( const char *stringToCompress, const size_t stringLength ) {
         numKeyLength[encoderTable[i].keyLength]++;
     }
 
-    for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
-        if ( i == 0 ) {
-            encoderTable[0].key = 0; //will expand out to all zeroes, keyLength tells the encoder how many 0 bits to input to file
-            continue;
-        }
-        unsigned int newKey = encoderTable[i - 1].key + 1;
-        unsigned int length = 0;
-        for ( unsigned int j = 0; j < sizeof( unsigned int ) * 8; ++j ) {
-            if ( newKey >> j & 1 ) {
-                length = j + 1;
-            }
-        }
-        while ( length++ < encoderTable[i].keyLength ) {
-            newKey = newKey << 1;
-        }
-        encoderTable[i].key = newKey;
+    printf( "Encoder Table (encode)\n" );
+    encoderTable[0].key = 0;
+    for ( unsigned int i = 1; i < numUniqueCharacters; ++i ) {
+        encoderTable[i].key = ( encoderTable[i - 1].key + 1 ) << ( encoderTable[i].keyLength - encoderTable[i - 1].keyLength );
+    }
+
+    for ( int i = 0; i < numUniqueCharacters; ++i ) {
+        printf( "%c: ", encoderTable[i].character );
+        printBinary( encoderTable[i].key, encoderTable[i].keyLength );
+        printf( "\n" );
     }
 
     char outputText[stringLength];
@@ -293,33 +294,42 @@ void huffman_decode( FILE *inputFile ) {
             continue;
         }
 
-        unsigned int newKey = encoderTable[i - 1].key + 1;
-        unsigned int length = 0;
-        for ( unsigned int j = 0; j < sizeof( unsigned int ) * 8; ++j ) {
-            if ( newKey >> j & 1 ) {
-                length = j + 1;
-            }
-        }
-        while ( length++ < encoderTable[i].keyLength ) {
-            newKey = newKey << 1;
-        }
-        encoderTable[i].key = newKey;
+        encoderTable[i].key = ( encoderTable[i - 1].key + 1 ) << ( encoderTable[i].keyLength - encoderTable[i - 1].keyLength );
+    }
+
+    printf( "Encoder Table (decode)\n" );
+    for ( int i = 0; i < numUniqueCharacters; ++i ) {
+        printf( "%c: ", encoderTable[i].character );
+        printBinary( encoderTable[i].key, encoderTable[i].keyLength );
+        printf( "\n" );
     }
 
     struct Node allNodes[numUniqueCharacters * 2 - 1];
-    unsigned int allNodesIndex = 0;
+    unsigned int allNodesIndex = 1;
 
     for ( unsigned int i = 0; i < numUniqueCharacters * 2 - 1; ++i ) {
-        allNodes[i] = ( struct Node ) { NULL, NULL, 0, NULL };
+        allNodes[i] = ( struct Node ) { NULL, NULL, 0, '\0' };
     }
     
     //setup tree
     for ( unsigned int i = 0; i < numUniqueCharacters; ++i ) {
         struct Node *currentNodeAddress = &allNodes[0];
-        for ( unsigned int j = 0; j < encoderTable[i].keyLength; ++ j ) {
+        for ( unsigned int j = 0; j < encoderTable[i].keyLength; ++j ) {
             bool nextIsRight = encoderTable[i].key >> j & 1;
             struct Node *nextNodeAddress = nextIsRight ? currentNodeAddress->right :
                                            currentNodeAddress->left;
+            if ( !nextNodeAddress ) {
+                nextNodeAddress = &allNodes[allNodesIndex++]; //set it to the next available node (is all NULLs at this point
+            }
+
+            if ( nextIsRight ) {
+                currentNodeAddress->right = nextNodeAddress;
+            } else {
+                currentNodeAddress->left = nextNodeAddress;
+            }
+
+            currentNodeAddress = nextNodeAddress;
         }
+        currentNodeAddress->label = encoderTable[i].character;
     }
 }
