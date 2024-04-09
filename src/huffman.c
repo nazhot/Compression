@@ -7,9 +7,9 @@
 
 //makes up the encoding/decoding tree
 struct Node {
-    struct Node *left;   //represented by '0' in key
-    struct Node *right;  //represented by '1' in key
-    uint weight; //number of times character appears in file
+    struct Node *left;  //represented by '0' in key
+    struct Node *right; //represented by '1' in key
+    uint weight;        //number of times character appears in file
     char character;      
 };
 
@@ -34,21 +34,21 @@ struct EncoderEntry {
 */
 static void printTree( struct Node *node ) {
 
-    static char string[256] = {0};     //stores the path to each node, always ends back at all '\0'
-    static uint treeLayer = 0; //how deep down into the tree the function is, always returns to 0
+    static char key[256] = {0}; //stores the path to each node, always ends back at all '\0'
+    static uint treeLayer = 0;  //how deep down into the tree the function is, always returns to 0
 
     if ( !node ) { 
         return;
     } else if ( node->character ) {
-        printf( "%c: %s\n", node->character, string );
+        printf( "%c: %s\n", node->character, key );
         return;
     }
 
-    string[treeLayer++] = '0';
+    key[treeLayer++] = '0';
     printTree( node->left );
-    string[treeLayer - 1] = '1';
+    key[treeLayer - 1] = '1';
     printTree( node->right );
-    string[--treeLayer] = '\0';
+    key[--treeLayer] = '\0';
 
 }
 
@@ -63,19 +63,36 @@ static void printBinary( uint binary, uint length ) {
     printf( " (%u)", binary );
 }
 
-static void setupEncoderTable( struct Node *node, struct EncoderEntry *table, uint64_t binary, uint index, uint8_t *encoderTableIndex ) {
-    if ( !node ) return;
-    
-    if ( node->character ) {
-        table[*encoderTableIndex].character = node->character;
-        table[*encoderTableIndex].key = binary;
-        table[*encoderTableIndex].keyLength = index;
-        *encoderTableIndex = *encoderTableIndex + 1;
+/*
+* Runs the initial setup of the encoder table, which holds information about the
+* key and keyLength for each character.
+*
+* Can NOT be used multiple times in one run, tableIndex will not be
+* set back to 0
+*/
+static void setupEncoderTable( struct Node *node, struct EncoderEntry *table ) {
+
+    static uint64_t key = 0;
+    static uint treeLayer = 0;
+    static uint8_t tableIndex = 0;
+
+    if ( !node ) {
+        return;
+    } else if ( node->character ) {
+        table[tableIndex] = ( struct EncoderEntry ) {
+                                                      .character = node->character,
+                                                      .key = key,
+                                                      .keyLength = treeLayer
+                                                    };
+        tableIndex++;
         return;
     }
-
-    setupEncoderTable( node->left, table, binary, index + 1, encoderTableIndex );
-    setupEncoderTable( node->right, table, binary | ( 1 << index ), index + 1, encoderTableIndex );
+    treeLayer++;
+    setupEncoderTable( node->left, table );
+    key ^=  1 << ( treeLayer - 1 );
+    setupEncoderTable( node->right, table );
+    key ^= 1 << ( treeLayer - 1 ); 
+    treeLayer--;
 }
 
 static struct Node combineAndResetNodes( struct PriorityNode *node1, struct PriorityNode *node2 ) {
@@ -194,8 +211,7 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
                                                     .keyLength = 255
                                                   };
     }
-    uint8_t encoderTableIndex = 0;
-    setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable, 0, 0, &encoderTableIndex );
+    setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable );
     qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByCharacter );
     qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByKeyLength );
 
