@@ -28,21 +28,28 @@ struct EncoderEntry {
     uint8_t keyLength; //how many bits make up the key, 1 <= keyLength <= 255
 };
 
-static void printTree( struct Node *node, char *string, unsigned int index ) {
-    if ( node->left ) {
-        string[index] = '0';
-        printTree( node->left, string, index + 1 );
-        string[index] = '\0';
-    }
-    if ( node->right ) {
-        string[index] = '1';
-        printTree( node->right, string, index + 1 );
-        string[index] = '\0';
+/*
+* Recursively print the whole tree structure, giving the key of each character
+* within it
+*/
+static void printTree( struct Node *node ) {
+
+    static char string[256] = {0};     //stores the path to each node, always ends back at all '\0'
+    static unsigned int treeLayer = 0; //how deep down into the tree the function is, always returns to 0
+
+    if ( !node ) { 
+        return;
+    } else if ( node->character ) {
+        printf( "%c: %s\n", node->character, string );
+        return;
     }
 
-    if ( node->character ) {
-        printf( "%c: %s\n", node->character, string );
-    }
+    string[treeLayer++] = '0';
+    printTree( node->left );
+    string[treeLayer - 1] = '1';
+    printTree( node->right );
+    string[--treeLayer] = '\0';
+
 }
 
 static void printBinary( unsigned int binary, unsigned int length ) {
@@ -172,9 +179,7 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
         ++allNodesIndex;
     }
 
-    char *temp = malloc( sizeof( char ) * 256 );
-    printTree( &allNodes[allNodesIndex - 1], temp, 0 );
-    free( temp );
+    printTree( &allNodes[allNodesIndex - 1] );
     struct EncoderEntry encoderTable[numUniqueCharacters];
     uint8_t encoderTransform[256] = {0};
     uint8_t numKeyLength[256] = {0}; //track how many of each key length there are for encoding the tree
