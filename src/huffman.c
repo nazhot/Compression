@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <errno.h>
 
 //makes up the encoding/decoding tree
 typedef struct Node {
@@ -158,7 +159,11 @@ static int orderEncoderEntryAscendingByKeyLength( const void *entry1, const void
 
 void huffman_encode( const char *inputFileName, const char *outputFileName ) {
     FILE *inputFile = fopen( inputFileName, "r" );
-    if ( !inputFile ) return;
+    if ( !inputFile ) {
+        fprintf( stderr, "Could not open input file %s (huffman encode)\n", inputFileName );
+        fprintf( stderr, "Error number: %i\n", errno );
+        exit( 1 );
+    }
 
     uint characterCounts[256] = {0};
     uint numUniqueCharacters = 0;
