@@ -32,7 +32,7 @@ typedef struct EncoderEntry {
 * Recursively print the whole tree structure, giving the key of each character
 * within it
 */
-static void printTree( Node *node ) {
+static void printTree( const Node *node ) {
 
     static char key[256] = {0}; //stores the path to each node, always ends back at all '\0'
     static uint treeLayer = 0;  //how deep down into the tree the function is, always returns to 0
@@ -56,7 +56,7 @@ static void printTree( Node *node ) {
 * Prints the bits of the binary given up to the requested length, prints in
 * the same order as it appears left to right when you use left/right shift
 */
-static void printBinary( uint binary, uint length ) {
+static void printBinary( const uint binary, const uint length ) {
     for ( uint i = 0; i < length; ++i ) {
        printf( "%c", binary >> ( length - 1 - i ) & 1 ? '1' : '0' );
     }
@@ -70,7 +70,7 @@ static void printBinary( uint binary, uint length ) {
 * Can NOT be used multiple times in one run, tableIndex will not be
 * set back to 0
 */
-static void setupEncoderTable( Node *node, EncoderEntry *table ) {
+static void setupEncoderTable( const Node *node, EncoderEntry* const table ) {
 
     static uint64_t key = 0;
     static uint treeLayer = 0;
@@ -80,10 +80,10 @@ static void setupEncoderTable( Node *node, EncoderEntry *table ) {
         return;
     } else if ( node->character ) {
         table[tableIndex] = ( EncoderEntry ) {
-                                                      .character = node->character,
-                                                      .key = key,
-                                                      .keyLength = treeLayer
-                                                    };
+                                               .character = node->character,
+                                               .key = key,
+                                               .keyLength = treeLayer
+                                             };
         tableIndex++;
         return;
     }
@@ -95,8 +95,19 @@ static void setupEncoderTable( Node *node, EncoderEntry *table ) {
     treeLayer--;
 }
 
-static Node combineAndResetNodes( PriorityNode *node1, PriorityNode *node2 ) {
-    Node newNode = ( Node ) { node1->address, node2->address, node1->weight + node2->weight, NULL };
+/*
+* This assumes that the weights will not overflow, no check is done. It also
+* assumes that node1 and node2 are both non-NULL, passing a NULL value in
+* either would crash the program. It also directly modifies the values
+* within node1 and node2.
+*/
+static Node combineAndResetNodes( PriorityNode* const node1, PriorityNode* const node2 ) {
+    Node newNode = ( Node ) { 
+                              .left = node1->address,
+                              .right = node2->address,
+                              .weight = node1->weight + node2->weight,
+                              .character = '\0'
+                            };
     node1->weight = UINT_MAX;
     node2->weight = UINT_MAX;
     return newNode; 
@@ -108,7 +119,7 @@ static int orderPriorityNodesAscending( const void *node1, const void *node2 ) {
     return n1->weight <=  n2->weight ? -1 : 1;
 }
 
-static void shiftPriorityNodeArrayDown( PriorityNode * const array, const uint arrayLength, const uint numShiftDown ) {
+static void shiftPriorityNodeArrayDown( PriorityNode* const array, const uint arrayLength, const uint numShiftDown ) {
     if ( arrayLength <= numShiftDown ) return;
 
     if ( numShiftDown == 2 ) array[1] = ( PriorityNode ) { NULL, UINT_MAX }; //deals with a situation where if it's a length of 3, and a shiftdown of 2, array[1] wouldn't be touched and would mess up future calcs
