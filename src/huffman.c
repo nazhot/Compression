@@ -122,17 +122,29 @@ static int orderPriorityNodesAscending( const void *node1, const void *node2 ) {
 static void shiftPriorityNodeArrayDown( PriorityNode* const array, const uint arrayLength, const uint numShiftDown ) {
     if ( arrayLength <= numShiftDown ) return;
 
-    if ( numShiftDown == 2 ) array[1] = ( PriorityNode ) { NULL, UINT_MAX }; //deals with a situation where if it's a length of 3, and a shiftdown of 2, array[1] wouldn't be touched and would mess up future calcs
+    if ( numShiftDown == 2 ) array[1] = ( PriorityNode ) { 
+                                                           .address =  NULL,
+                                                           .weight = UINT_MAX
+                                                         }; //deals with a situation where if it's a length of 3, and a shiftdown of 2, array[1] wouldn't be touched and would mess up future calcs
+    //shift the elements down the array
     uint index = numShiftDown;
     while ( arrayLength - index ) {
         array[index - numShiftDown] = array[index]; 
         ++index;
     }
-    for ( uint i = 0; i < numShiftDown; i++ ) {
-        array[arrayLength - 1 - i] = ( PriorityNode ) { NULL, UINT_MAX };
+    
+    //make the final moved elements have maxed out weight with no address to avoid
+    //moving them multiple times in future calls
+    for ( uint i = 0; i < numShiftDown; ++i ) {
+        array[arrayLength - 1 - i] = ( PriorityNode ) {
+                                                        .address = NULL,
+                                                        .weight = UINT_MAX
+                                                      };
     }
 }
 
+//ascending is referring to the literal ascii code for characters, thinking of
+//them as characters it could be said they're descending (A, B, C, ...)
 static int orderEncoderEntryAscendingByCharacter( const void *entry1, const void *entry2 ) {
     const EncoderEntry *e1 = ( EncoderEntry * ) entry1;
     const EncoderEntry *e2 = ( EncoderEntry * ) entry2;
