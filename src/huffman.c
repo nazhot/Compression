@@ -193,17 +193,28 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
     uint8_t queue2Index = 0; 
 
     printf( "Number of unique characters: %u\n", numUniqueCharacters ); 
+    printf( "---Character Counts---\n" );
     //iterate through all possible chars, not limiting to 127 now because I
     //want this to be a generic algorithm, not just focused on alphabets.
-    //for now, I am just testing with strings, so am avoiding 0 because it causes
-    //output to print nothing
-    for ( uint8_t i = 1; i != 0; ++i ) { //goes from 1 to 255
-        if ( !characterCounts[i] ) continue;
+    //scoped to avoid i leaking out to other bits of code
+    {
+        uint8_t i = 0;
+        do {
+            if ( !characterCounts[i] ) continue;
 
-        printf( "%c: %i\n", i, characterCounts[i] );
-        allNodes[allNodesIndex] = ( Node ) { NULL, NULL, characterCounts[i], i };
-        queue1[queue1Index] = ( PriorityNode ) { &allNodes[allNodesIndex++], characterCounts[i] };
-        queue2[queue1Index++] = ( PriorityNode ) { NULL, UINT_MAX };
+            printf( "%c: %i\n", i, characterCounts[i] );
+            allNodes[allNodesIndex] = ( Node ) { 
+                                                 .left = NULL,
+                                                 .right = NULL,
+                                                 .weight =characterCounts[i],
+                                                 .character =i
+                                               };
+            queue1[queue1Index] = ( PriorityNode ) { 
+                                                     .address = &allNodes[allNodesIndex++],
+                                                     .weight = characterCounts[i]
+                                                   };
+            queue2[queue1Index++] = ( PriorityNode ) { NULL, UINT_MAX };
+        } while ( i++ != 255 );
     }
 
     qsort( queue1, numUniqueCharacters, sizeof( PriorityNode ), orderPriorityNodesAscending ); 
