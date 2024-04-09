@@ -6,33 +6,33 @@
 #include <stdbool.h>
 
 //makes up the encoding/decoding tree
-struct Node {
+typedef struct Node {
     struct Node *left;  //represented by '0' in key
     struct Node *right; //represented by '1' in key
     uint weight;        //number of times character appears in file
     char character;      
-};
+} Node;
 
 //used to save space when creating the encoding tree
-struct PriorityNode {
+typedef struct PriorityNode {
     struct Node *address; 
     uint weight;  
-};
+} PriorityNode;
 
 //holds information on encoding/decoding characters
-struct EncoderEntry {
+typedef struct EncoderEntry {
     char character;    
     uint64_t key;      //binary key used to encode/decode that character
                        //keys that use more than 64 bits will overflow and not be stored
                        //TODO: update to format that can handle up to the possible 255 length
     uint8_t keyLength; //how many bits make up the key, 1 <= keyLength <= 255
-};
+} EncoderEntry;
 
 /*
 * Recursively print the whole tree structure, giving the key of each character
 * within it
 */
-static void printTree( struct Node *node ) {
+static void printTree( Node *node ) {
 
     static char key[256] = {0}; //stores the path to each node, always ends back at all '\0'
     static uint treeLayer = 0;  //how deep down into the tree the function is, always returns to 0
@@ -70,7 +70,7 @@ static void printBinary( uint binary, uint length ) {
 * Can NOT be used multiple times in one run, tableIndex will not be
 * set back to 0
 */
-static void setupEncoderTable( struct Node *node, struct EncoderEntry *table ) {
+static void setupEncoderTable( Node *node, EncoderEntry *table ) {
 
     static uint64_t key = 0;
     static uint treeLayer = 0;
@@ -79,7 +79,7 @@ static void setupEncoderTable( struct Node *node, struct EncoderEntry *table ) {
     if ( !node ) {
         return;
     } else if ( node->character ) {
-        table[tableIndex] = ( struct EncoderEntry ) {
+        table[tableIndex] = ( EncoderEntry ) {
                                                       .character = node->character,
                                                       .key = key,
                                                       .keyLength = treeLayer
@@ -95,41 +95,41 @@ static void setupEncoderTable( struct Node *node, struct EncoderEntry *table ) {
     treeLayer--;
 }
 
-static struct Node combineAndResetNodes( struct PriorityNode *node1, struct PriorityNode *node2 ) {
-    struct Node newNode = ( struct Node ) { node1->address, node2->address, node1->weight + node2->weight, NULL };
+static Node combineAndResetNodes( PriorityNode *node1, PriorityNode *node2 ) {
+    Node newNode = ( Node ) { node1->address, node2->address, node1->weight + node2->weight, NULL };
     node1->weight = UINT_MAX;
     node2->weight = UINT_MAX;
     return newNode; 
 }
 
 static int orderPriorityNodesAscending( const void *node1, const void *node2 ) {
-    const struct PriorityNode *n1 = ( struct PriorityNode * ) node1;
-    const struct PriorityNode *n2 = ( struct PriorityNode * ) node2;
+    const PriorityNode *n1 = ( PriorityNode * ) node1;
+    const PriorityNode *n2 = ( PriorityNode * ) node2;
     return n1->weight <=  n2->weight ? -1 : 1;
 }
 
-static void shiftPriorityNodeArrayDown( struct PriorityNode * const array, const uint arrayLength, const uint numShiftDown ) {
+static void shiftPriorityNodeArrayDown( PriorityNode * const array, const uint arrayLength, const uint numShiftDown ) {
     if ( arrayLength <= numShiftDown ) return;
 
-    if ( numShiftDown == 2 ) array[1] = ( struct PriorityNode ) { NULL, UINT_MAX }; //deals with a situation where if it's a length of 3, and a shiftdown of 2, array[1] wouldn't be touched and would mess up future calcs
+    if ( numShiftDown == 2 ) array[1] = ( PriorityNode ) { NULL, UINT_MAX }; //deals with a situation where if it's a length of 3, and a shiftdown of 2, array[1] wouldn't be touched and would mess up future calcs
     uint index = numShiftDown;
     while ( arrayLength - index ) {
         array[index - numShiftDown] = array[index]; 
         ++index;
     }
     for ( uint i = 0; i < numShiftDown; i++ ) {
-        array[arrayLength - 1 - i] = ( struct PriorityNode ) { NULL, UINT_MAX };
+        array[arrayLength - 1 - i] = ( PriorityNode ) { NULL, UINT_MAX };
     }
 }
 
 static int orderEncoderEntryAscendingByCharacter( const void *entry1, const void *entry2 ) {
-    const struct EncoderEntry *e1 = ( struct EncoderEntry * ) entry1;
-    const struct EncoderEntry *e2 = ( struct EncoderEntry * ) entry2;
+    const EncoderEntry *e1 = ( EncoderEntry * ) entry1;
+    const EncoderEntry *e2 = ( EncoderEntry * ) entry2;
     return e1->character < e2->character ? -1 : 1;
 }
 static int orderEncoderEntryAscendingByKeyLength( const void *entry1, const void *entry2 ) {
-    const struct EncoderEntry *e1 = ( struct EncoderEntry * ) entry1;
-    const struct EncoderEntry *e2 = ( struct EncoderEntry * ) entry2;
+    const EncoderEntry *e1 = ( EncoderEntry * ) entry1;
+    const EncoderEntry *e2 = ( EncoderEntry * ) entry2;
     return e1->keyLength <= e2->keyLength ? -1 : 1;
 }
 
@@ -149,9 +149,9 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
 
     if ( !numUniqueCharacters ) return;
 
-    struct Node allNodes[numUniqueCharacters * 2 - 1];
-    struct PriorityNode queue1[numUniqueCharacters];
-    struct PriorityNode queue2[numUniqueCharacters];
+    Node allNodes[numUniqueCharacters * 2 - 1];
+    PriorityNode queue1[numUniqueCharacters];
+    PriorityNode queue2[numUniqueCharacters];
     uint16_t allNodesIndex = 0;
     uint8_t queue1Index = 0; 
     uint8_t queue2Index = 0; 
@@ -165,20 +165,20 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
         if ( !characterCounts[i] ) continue;
 
         printf( "%c: %i\n", i, characterCounts[i] );
-        allNodes[allNodesIndex] = ( struct Node ) { NULL, NULL, characterCounts[i], i };
-        queue1[queue1Index] = ( struct PriorityNode ) { &allNodes[allNodesIndex++], characterCounts[i] };
-        queue2[queue1Index++] = ( struct PriorityNode ) { NULL, UINT_MAX };
+        allNodes[allNodesIndex] = ( Node ) { NULL, NULL, characterCounts[i], i };
+        queue1[queue1Index] = ( PriorityNode ) { &allNodes[allNodesIndex++], characterCounts[i] };
+        queue2[queue1Index++] = ( PriorityNode ) { NULL, UINT_MAX };
     }
 
-    qsort( queue1, numUniqueCharacters, sizeof( struct PriorityNode ), orderPriorityNodesAscending ); 
+    qsort( queue1, numUniqueCharacters, sizeof( PriorityNode ), orderPriorityNodesAscending ); 
 
     //make the final tree
     uint8_t numStepsNeeded = numUniqueCharacters - 1;
     while ( numStepsNeeded-- ) {
         const bool queue1LT = queue1[0].weight < queue2[0].weight; 
         bool queue2LT;
-        struct PriorityNode *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
-        struct PriorityNode *p_node2;
+        PriorityNode *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
+        PriorityNode *p_node2;
         if ( queue1LT ) {
             queue2LT = queue2[0].weight < queue1[1].weight; 
             p_node2 = queue2LT ? &queue2[0] : &queue1[1];
@@ -196,24 +196,24 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
         shiftPriorityNodeArrayDown( queue1, numUniqueCharacters, numTakenFromQueue1 );
         shiftPriorityNodeArrayDown( queue2, numUniqueCharacters, numTakenFromQueue2 );
         //after shifting q2, place the new element at the end of the queue
-        queue2[queue2Index++] = ( struct PriorityNode ) { &allNodes[allNodesIndex], allNodes[allNodesIndex].weight };
+        queue2[queue2Index++] = ( PriorityNode ) { &allNodes[allNodesIndex], allNodes[allNodesIndex].weight };
         ++allNodesIndex;
     }
 
     printTree( &allNodes[allNodesIndex - 1] );
-    struct EncoderEntry encoderTable[numUniqueCharacters];
+    EncoderEntry encoderTable[numUniqueCharacters];
     uint8_t encoderTransform[256] = {0};
     uint8_t numKeyLength[256] = {0}; //track how many of each key length there are for encoding the tree
     for ( int i = 0; i < numUniqueCharacters; ++i ) {
-        encoderTable[i] = ( struct EncoderEntry ) { 
+        encoderTable[i] = ( EncoderEntry ) { 
                                                     .character = i,
                                                     .key = 0,
                                                     .keyLength = 255
                                                   };
     }
     setupEncoderTable( &allNodes[allNodesIndex - 1], encoderTable );
-    qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByCharacter );
-    qsort( encoderTable, numUniqueCharacters, sizeof( struct EncoderEntry ), orderEncoderEntryAscendingByKeyLength );
+    qsort( encoderTable, numUniqueCharacters, sizeof( EncoderEntry ), orderEncoderEntryAscendingByCharacter );
+    qsort( encoderTable, numUniqueCharacters, sizeof( EncoderEntry ), orderEncoderEntryAscendingByKeyLength );
 
     for ( uint i = 0; i < numUniqueCharacters; ++i ) {
         encoderTransform[encoderTable[i].character] = i;
@@ -242,7 +242,7 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
     }
 
     while ( fread( &currentCharacter, 1, 1, inputFile ) ) {
-        struct EncoderEntry entry = encoderTable[encoderTransform[currentCharacter]];
+        EncoderEntry entry = encoderTable[encoderTransform[currentCharacter]];
         //printf( "%c: %u (%u)\n", character, entry.key, entry.keyLength );
         for ( int j = 0; j < entry.keyLength; ++j ) {
             if ( bitOffset > 7 ) { //end of buffer
@@ -285,7 +285,7 @@ void huffman_decode( const char *inputFileName ) {
         printf( "Keys @ length %u: %u\n", i + 1, numKeyLengths[i] );
     }
     printf( "Num unique characters: %u\n", numUniqueCharacters );
-    struct EncoderEntry encoderTable[numUniqueCharacters];
+    EncoderEntry encoderTable[numUniqueCharacters];
     uint8_t currentKeyLength = 1;
     while ( !numKeyLengths[currentKeyLength - 1] ) currentKeyLength++;
     uint8_t runningTotal = numKeyLengths[currentKeyLength - 1];
@@ -310,19 +310,19 @@ void huffman_decode( const char *inputFileName ) {
         printf( "\n" );
     }
 
-    struct Node allNodes[numUniqueCharacters * 2 - 1];
+    Node allNodes[numUniqueCharacters * 2 - 1];
     uint allNodesIndex = 1;
 
     for ( uint i = 0; i < numUniqueCharacters * 2 - 1; ++i ) {
-        allNodes[i] = ( struct Node ) { NULL, NULL, 0, '\0' };
+        allNodes[i] = ( Node ) { NULL, NULL, 0, '\0' };
     }
     
     //setup tree
     for ( uint i = 0; i < numUniqueCharacters; ++i ) {
-        struct Node *currentNodeAddress = &allNodes[0];
+        Node *currentNodeAddress = &allNodes[0];
         for ( uint j = 0; j < encoderTable[i].keyLength; ++j ) {
             bool nextIsRight = encoderTable[i].key >> ( encoderTable[i].keyLength - j - 1 ) & 1;
-            struct Node *nextNodeAddress = nextIsRight ? currentNodeAddress->right :
+            Node *nextNodeAddress = nextIsRight ? currentNodeAddress->right :
                                            currentNodeAddress->left;
             if ( !nextNodeAddress ) {
                 nextNodeAddress = &allNodes[allNodesIndex++]; //set it to the next available node (is all NULLs at this point
@@ -340,7 +340,7 @@ void huffman_decode( const char *inputFileName ) {
     }
 
     char currentByte; 
-    struct Node *currentNode = &allNodes[0];
+    Node *currentNode = &allNodes[0];
     while ( fread( &currentByte, 1, 1, inputFile ) ) {
        for ( uint i = 0; i < 8; ++i ) {
             if ( !currentNode ) {
