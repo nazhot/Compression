@@ -162,26 +162,34 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
     if ( !inputFile ) {
         fprintf( stderr, "Could not open input file %s (huffman encode)\n", inputFileName );
         fprintf( stderr, "Error number: %i\n", errno );
-        exit( 1 );
+        return;
     }
 
     uint characterCounts[256] = {0};
     uint numUniqueCharacters = 0;
-    char currentCharacter = '\0';
+    char currentCharacter = '\0'; //used to store the character from the input file
     uint inputFileLength = 0;
 
+    //read the file one character at a time
     while ( fread( &currentCharacter, 1, 1, inputFile ) ) {
         numUniqueCharacters += ++characterCounts[currentCharacter] == 1;
         inputFileLength++;
     }
 
-    if ( !numUniqueCharacters ) return;
+    if ( !numUniqueCharacters ) { //empty file
+        fprintf( stderr, "%s has not contents, exiting\n", inputFileName );
+        return;
+    }
 
-    Node allNodes[numUniqueCharacters * 2 - 1];
-    PriorityNode queue1[numUniqueCharacters];
-    PriorityNode queue2[numUniqueCharacters];
-    uint16_t allNodesIndex = 0;
-    uint8_t queue1Index = 0; 
+    Node allNodes[numUniqueCharacters * 2 - 1]; //total nodes in the tree, is
+                                                //n (total number of characters)
+                                                //+ (n - 1) (number of combined
+                                                //nodes
+    PriorityNode queue1[numUniqueCharacters]; //initially holds all of the character leaves, only shrinks
+    PriorityNode queue2[numUniqueCharacters]; //initially empty, fills up with combination Nodes. Can grow and shrink, always gains the newest Node created
+
+    uint16_t allNodesIndex = 0; //has to be able to go up to 256 * 2 - 1 = 511, so uint16
+    uint8_t queue1Index = 0;
     uint8_t queue2Index = 0; 
 
     printf( "Number of unique characters: %u\n", numUniqueCharacters ); 
