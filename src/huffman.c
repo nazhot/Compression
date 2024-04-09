@@ -5,31 +5,28 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+//makes up the encoding/decoding tree
 struct Node {
-    struct Node *left;
-    struct Node *right;
-    unsigned int weight;
-    char label;
+    struct Node *left;   //represented by '0' in key
+    struct Node *right;  //represented by '1' in key
+    unsigned int weight; //number of times character appears in file
+    char character;      
 };
 
+//used to save space when creating the encoding tree
 struct PriorityNode {
-    struct Node *address;
-    unsigned int weight;
+    struct Node *address; 
+    unsigned int weight;  
 };
 
+//holds information on encoding/decoding characters
 struct EncoderEntry {
-    char character;
-    uint64_t key;
-    uint8_t keyLength;
+    char character;    
+    uint64_t key;      //binary key used to encode/decode that character
+                       //keys that use more than 64 bits will overflow and not be stored
+                       //TODO: update to format that can handle up to the possible 255 length
+    uint8_t keyLength; //how many bits make up the key, 1 <= keyLength <= 255
 };
-
-static void printNode( const struct Node *node ) {
-    printf( "Node Address:     %p\n", node );
-    printf( "     Label:       %c\n", node->label );
-    printf( "     Weight:      %u\n", node->weight );
-    printf( "     Left Child:  %p\n", node->left );
-    printf( "     Right Child: %p\n", node->right );
-}
 
 static void printTree( struct Node *node, char *string, unsigned int index ) {
     if ( node->left ) {
@@ -43,8 +40,8 @@ static void printTree( struct Node *node, char *string, unsigned int index ) {
         string[index] = '\0';
     }
 
-    if ( node->label ) {
-        printf( "%c: %s\n", node->label, string );
+    if ( node->character ) {
+        printf( "%c: %s\n", node->character, string );
     }
 }
 
@@ -58,8 +55,8 @@ static void printBinary( unsigned int binary, unsigned int length ) {
 static void setupEncoderTable( struct Node *node, struct EncoderEntry *table, uint64_t binary, unsigned int index, uint8_t *encoderTableIndex ) {
     if ( !node ) return;
     
-    if ( node->label ) {
-        table[*encoderTableIndex].character = node->label;
+    if ( node->character ) {
+        table[*encoderTableIndex].character = node->character;
         table[*encoderTableIndex].key = binary;
         table[*encoderTableIndex].keyLength = index;
         *encoderTableIndex = *encoderTableIndex + 1;
@@ -106,10 +103,6 @@ static int orderEncoderEntryAscendingByKeyLength( const void *entry1, const void
     const struct EncoderEntry *e1 = ( struct EncoderEntry * ) entry1;
     const struct EncoderEntry *e2 = ( struct EncoderEntry * ) entry2;
     return e1->keyLength <= e2->keyLength ? -1 : 1;
-}
-
-static void updateTableToCanonical( struct EncoderEntry *table ) {
-
 }
 
 void huffman_encode( const char *inputFileName, const char *outputFileName ) {
@@ -318,7 +311,7 @@ void huffman_decode( const char *inputFileName ) {
 
             currentNodeAddress = nextNodeAddress;
         }
-        currentNodeAddress->label = encoderTable[i].character;
+        currentNodeAddress->character = encoderTable[i].character;
     }
 
     char currentByte; 
@@ -328,8 +321,8 @@ void huffman_decode( const char *inputFileName ) {
             if ( !currentNode ) {
                 break;
             }
-            if ( currentNode->label ) {
-                printf( "%c", currentNode->label );
+            if ( currentNode->character ) {
+                printf( "%c", currentNode->character );
                 currentNode = &allNodes[0];
             }
 
