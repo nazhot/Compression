@@ -213,43 +213,55 @@ void huffman_encode( const char *inputFileName, const char *outputFileName ) {
                                                      .address = &allNodes[allNodesIndex++],
                                                      .weight = characterCounts[i]
                                                    };
-            queue2[queue1Index++] = ( PriorityNode ) { NULL, UINT_MAX };
+            queue2[queue1Index++] = ( PriorityNode ) { 
+                                                       .address = NULL,
+                                                       .weight =UINT_MAX
+                                                     };
         } while ( i++ != 255 );
     }
 
     qsort( queue1, numUniqueCharacters, sizeof( PriorityNode ), orderPriorityNodesAscending ); 
 
     //make the final tree
-    uint8_t numStepsNeeded = numUniqueCharacters - 1;
-    while ( numStepsNeeded-- ) {
-        const bool queue1LT = queue1[0].weight < queue2[0].weight; 
-        bool queue2LT;
-        PriorityNode *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
-        PriorityNode *p_node2;
-        if ( queue1LT ) {
-            queue2LT = queue2[0].weight < queue1[1].weight; 
-            p_node2 = queue2LT ? &queue2[0] : &queue1[1];
-        } else {
-            queue2LT = queue2[1].weight < queue1[0].weight;
-            p_node2 = queue2LT ?  &queue2[1] : &queue1[0];
-        }
-        queue2Index -= ( queue1LT == false ) + ( queue2LT );
-        const uint numTakenFromQueue1 = queue1LT + ( queue2LT == false ); //how many elements from q1 were taken
-        const uint numTakenFromQueue2 = 2 - numTakenFromQueue1; //how many elements from q2 were taken
+    //grab the 2 nodes with the lowest weights
+    //combine them, add to the end of queue2, and remove the 2 nodes from their queues
+    //move elements forward in both queues based on how many were taken from it
+    {
+        uint8_t numStepsNeeded = numUniqueCharacters - 1;
+        while ( numStepsNeeded-- ) {
+            const bool queue1LT = queue1[0].weight < queue2[0].weight; 
+            bool queue2LT;
+            PriorityNode *p_node1 = queue1LT ? &queue1[0] : &queue2[0];
+            PriorityNode *p_node2;
+            if ( queue1LT ) {
+                queue2LT = queue2[0].weight < queue1[1].weight; 
+                p_node2 = queue2LT ? &queue2[0] : &queue1[1];
+            } else {
+                queue2LT = queue2[1].weight < queue1[0].weight;
+                p_node2 = queue2LT ?  &queue2[1] : &queue1[0];
+            }
+            const uint numTakenFromQueue1 = queue1LT + ( queue2LT == false ); //how many elements from q1 were taken
+            const uint numTakenFromQueue2 = 2 - numTakenFromQueue1; //how many elements from q2 were taken
+            queue2Index -= numTakenFromQueue2;
 
-        //create the new tree with the two lowest elements as its children
-        allNodes[allNodesIndex] = combineAndResetNodes( p_node1, p_node2 );
-        //shift both queues down by how many elements were taken from each
-        shiftPriorityNodeArrayDown( queue1, numUniqueCharacters, numTakenFromQueue1 );
-        shiftPriorityNodeArrayDown( queue2, numUniqueCharacters, numTakenFromQueue2 );
-        //after shifting q2, place the new element at the end of the queue
-        queue2[queue2Index++] = ( PriorityNode ) { &allNodes[allNodesIndex], allNodes[allNodesIndex].weight };
-        ++allNodesIndex;
+            //create the new tree with the two lowest elements as its children
+            allNodes[allNodesIndex] = combineAndResetNodes( p_node1, p_node2 );
+            //shift both queues down by how many elements were taken from each
+            shiftPriorityNodeArrayDown( queue1, numUniqueCharacters, numTakenFromQueue1 );
+            shiftPriorityNodeArrayDown( queue2, numUniqueCharacters, numTakenFromQueue2 );
+            //after shifting q2, place the new element at the end of the queue
+            queue2[queue2Index++] = ( PriorityNode ) {
+                                                       .address = &allNodes[allNodesIndex],
+                                                       .weight = allNodes[allNodesIndex].weight
+                                                     };
+            ++allNodesIndex;
+        }
     }
 
     printTree( &allNodes[allNodesIndex - 1] );
+
     EncoderEntry encoderTable[numUniqueCharacters];
-    uint8_t encoderTransform[256] = {0};
+    uint8_t encoderTransform[256] = {0}; //encoderTransform[ind] is the index of encoderTable that uses character 'ind'
     uint8_t numKeyLength[256] = {0}; //track how many of each key length there are for encoding the tree
     for ( int i = 0; i < numUniqueCharacters; ++i ) {
         encoderTable[i] = ( EncoderEntry ) { 
