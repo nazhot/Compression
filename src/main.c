@@ -11,7 +11,8 @@ int main( int argc, char *argv[] ) {
     huffman_decode( outputFileName );
 
     char *delta_inputFileName = "delta_input";
-    deltaFileIntoString( delta_inputFileName );
+    char *delta_outputFileName = "delta_output";
+    deltaFileIntoFile( delta_inputFileName, delta_outputFileName );
 
     return 0;
 }
